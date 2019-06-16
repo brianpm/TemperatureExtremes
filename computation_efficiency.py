@@ -1,12 +1,20 @@
+import logging
 import xarray as xr
 import numpy as np
-from numba import jit
+# from numba import jit
 
-ds = xr.open_dataset("/Users/brianpm/Downloads/CERES_EBAF-TOA_Ed4.0_Subset_200003-201810.nc")
+ds = xr.open_mfdataset(["/project/amp/jcaron/CPC_Tminmax/tmax.2000.nc",
+                        "/project/amp/jcaron/CPC_Tminmax/tmax.2001.nc",
+                        "/project/amp/jcaron/CPC_Tminmax/tmax.2002.nc",
+                        "/project/amp/jcaron/CPC_Tminmax/tmax.2003.nc",],
+                        decode_cf=False)
 
-da = ds['toa_cre_net_mon']
+ds = xr.decode_cf(ds)
+da = ds['tmax']
 
-# print(da)
+time_ndx = da.dims.index('time')
+
+logging.info(f"The time index has been identified as axis number {time_ndx}")
 
 # calculation of IQR
 
@@ -18,7 +26,8 @@ da = ds['toa_cre_net_mon']
 
 
 # 2. Numpy
-# q25 = np.percentile(da, 25, axis=0, overwrite_input=False, interpolation='linear', keepdims=False)
+q25 = np.percentile(da, 25, axis=time_ndx, overwrite_input=False, interpolation='linear', keepdims=False)
+print(q25)
 # real	0m1.827s
 # user	0m0.951s
 # sys	0m0.411s
@@ -34,19 +43,19 @@ da = ds['toa_cre_net_mon']
 # 3. Reshape and loop
 
 # 3.a : Just doing a loop is very slow
-tmp = da.stack(z=('lat','lon'))
+# tmp = da.stack(z=('lat','lon'))
 # c = 0
 # for j, zz in enumerate(tmp.z):
 # 	c += 1 
 # print(c)
 
 # 3.b : A loop that is compiled:
-@jit(nopython=True)
-def space_loop(arr):
-	c = 0
-	for j in np.arange(arr.shape[1]):
-		c += 1
-	return c
+# @jit(nopython=True)
+# def space_loop(arr):
+# 	c = 0
+# 	for j in np.arange(arr.shape[1]):
+# 		c += 1
+# 	return c
 # cnt = space_loop(tmp.values)
 # print(cnt)
 # this is actually pretty fast without jit:
@@ -60,17 +69,17 @@ def space_loop(arr):
 # sys	0m0.493s
 
 # 3.c now loop and do the calculation using numpy function:
-@jit(nopython=False)
-def space_loop_qant(arr):
-	result = []
-	for j in np.arange(arr.shape[1]):
-		good_vals = np.isfinite(arr[:,j])
-		result.append(np.percentile(arr[good_vals,j], 25, interpolation='linear'))
-	return np.array(result)
+# @jit(nopython=False)
+# def space_loop_qant(arr):
+# 	result = []
+# 	for j in np.arange(arr.shape[1]):
+# 		good_vals = np.isfinite(arr[:,j])
+# 		result.append(np.percentile(arr[good_vals,j], 25, interpolation='linear'))
+# 	return np.array(result)
 
-tmptmp = tmp.values
-q25 = space_loop_qant(tmptmp)
-print(q25)
+# tmptmp = tmp.values
+# q25 = space_loop_qant(tmptmp)
+# print(q25)
 # without jit:
 # real	0m3.234s
 # user	0m2.963s
