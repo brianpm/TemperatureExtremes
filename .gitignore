@@ -76,6 +76,12 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# Emacs backups
+.*~
+
+# Dask workers
+dask-worker-space/
+
 # IPython
 profile_default/
 ipython_config.py
