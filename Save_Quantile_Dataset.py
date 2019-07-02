@@ -44,14 +44,26 @@ def get_our_quants(data):
 # --- Brian Medeiros, 22 June 2019 (run on topaz.cgd.ucar.edu; ~1 hr)
 #
 
-OUTPUT = f"/project/amp/brianpm/TemperatureExtremes/CPC_tmax_dayofyear_quantiles_15daywindow_c{date.today().strftime('%Y%m%d')}.nc"
+OUTPUT = f"/project/amp/brianpm/TemperatureExtremes/Derived/f.e13.FAMIPC5CN.ne30_ne30.beta17.TREFMXAV.dayofyear_quantiles_15daywindow_c{date.today().strftime('%Y%m%d')}.nc"
 logging.info(f"YOUR OUTPUT FILE WILL BE NAMED: {OUTPUT}")
 
-gpat = "/project/amp/jcaron/CPC_Tminmax/tmax.*.nc"
-ds = xr.open_mfdataset(gpat, decode_cf=False)
-ds = xr.decode_cf(ds)
-tmax = ds['tmax']
+# OBSERVATIONAL DATA:
+# gpat = "/project/amp/jcaron/CPC_Tminmax/tmax.*.nc"
+# ds = xr.open_mfdataset(gpat, decode_cf=False)
+# ds = xr.decode_cf(ds)
+# out_file_info = f"Data derived from glob patter {gpat}, resulting in data set with {len(ds['time'])} time slices."
+# tmax = ds['tmax']
+
+# REGRIDDED MODEL DATA:
+ds = xr.open_dataset("/project/amp/brianpm/TemperatureExtremes/Regridded/f.e13.FAMIPC5CN.ne30_ne30.beta17.t3.cam.h1.TREFMXAV.19650101-20051231.regrid.nc")
+tmax = ds['TREFMXAV']
+
 logging.info("Loaded the tmax DataArray (likely lazy load)")
+
+#
+# --- no more user input needed after here ---
+# --- REQUIRED: ds, tmax
+#
 
 time_ndx = tmax.dims.index('time')
 
@@ -66,7 +78,7 @@ else:
     logging.warning("NO UNITS ATTACHED TO VARIABLE.")
     var_units = "N/A"
     
-out_file_info = f"Data derived from glob patter {gpat}, resulting in data set with {len(ds['time'])} time slices."
+
 #
 # metadata / coordinates / define quantile
 #
