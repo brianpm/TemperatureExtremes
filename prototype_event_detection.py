@@ -22,7 +22,7 @@ vincrementer = np.vectorize(incrementer)
 
 # the testing data set:
 # "by_coords" for newest version of xarray
-ds = xr.open_mfdataset("/project/amp/akwilson/2006-2019/tmax.*.nc", combine="by_coords")
+ds = xr.open_mfdataset("/project/amp/jcaron/CPC_Tminmax/tmax.*.nc", combine="by_coords")
 
 # the quantiles:
 ds_q = xr.open_dataset(
@@ -68,6 +68,8 @@ event_id_da.name = "Event_ID"
 event_id_da.attrs["long_name"] = "Event ID Number based on Tmax > 90th percentile"
 
 # option -- should we save this as a dataset:
+save_out = True
+OUTPUT = "/project/amp/brianpm/TemperatureExtremes/Derived/CPC_tmax_90pct_event_detection.nc"
 if save_out:
     event_id_da.to_netcdf(
         OUTPUT,
