@@ -3,19 +3,9 @@ import xarray as xr
 import logging
 logging.basicConfig(level=logging.INFO)
 
-#
-# debug/testing options:
-#
-testing = False
-test_sample_size = 5*366
 
-
-
-#
-# local function to define events/index/duration
-#
 def theloop(arr):
-	# setup 
+	"""Generate DataArrays of ID, index, and duration of events.""" 
 	out_event_size = arr.max()            # largest number of events -> defines output array size
 	nz = arr.shape[1]                     # number of spatial points
 	a = np.zeros((nz, out_event_size+1))  # +1 because we didn't include the zeros
@@ -36,65 +26,72 @@ def theloop(arr):
 	return a,b,c
 
 
-# load event_IDs
-fil = (
-    "/project/amp/brianpm/TemperatureExtremes/Derived/CPC_tmax_90pct_event_detection.nc"
-)
-ds = xr.open_dataset(fil)
-logging.info("ds is defined.")
-if testing:
-	events = ds["Event_ID"].isel(time=slice(0,test_sample_size))
-else:
-	events = ds["Event_ID"]
+def run(indata):
+ 
+    if testing:
+    	events = indata["Event_ID"].isel(time=slice(0,test_sample_size))
+    else:
+    	events = indata["Event_ID"]
 
-logging.info("events array defined.")
+    logging.info("events array defined.")
 
-# turn events into time x space by stacking lat & lon:
-events_stacked = events.stack(z=("lat", "lon"))
-logging.info("Stacked events.")
-# events_stacked is [time, z]
+    # turn events into time x space by stacking lat & lon:
+    events_stacked = events.stack(z=("lat", "lon"))
+    logging.info("Stacked events.")
+    # events_stacked is [time, z]
 
-# make sure to only have integers for the event IDs:
-zint = events_stacked.values.astype(int)
-logging.info(f"Convert events to integers. Result is shape {zint.shape}.")  # should still be [time, z]
+    # make sure to only have integers for the event IDs:
+    zint = events_stacked.values.astype(int)
+    logging.info(f"Convert events to integers. Result is shape {zint.shape}.")  # should still be [time, z]
 
-mx = np.max(zint)
-logging.info(f"Max number of events is {mx}; output dimesion size (add one for zeros).")
+    mx = np.max(zint)
+    logging.info(f"Max number of events is {mx}; output dimesion size (add one for zeros).")
 
-# Options:
-# Option 0: Don't store the attributes at all, but just re-calculate from detection.
-# Option 1: Save attributes as large arrays; the "event" dimension must be max(zmax)
-# Option 2: Organize event attributes by location, and then decide how to save.
-#
-# Option 2 is potentially a smaller volume, but requires many files (probably).
-# Option 1 is more volume, but might be easier to understand.
+    ids, ndx, dur = theloop(zint)
+    logging.info("Loop done.")
 
-# we implement option 1 in function theloop:
-ids, ndx, dur = theloop(zint)
-logging.info("Loop done.")
+    # Convert resulting numpy arrays to Xarray DataArrays 
+    ids_da = xr.DataArray(ids, coords={"z":events_stacked['z'], 'events':np.arange(1,mx+2)}, 
+    	dims=("z", "events"))
+    ndx_da = xr.DataArray(ndx, coords={"z":events_stacked['z'], 'events':np.arange(1,mx+2)}, 
+    	dims=("z", "events"))
+    cnt_da = xr.DataArray(dur, coords={"z":events_stacked['z'], 'events':np.arange(1,mx+2)}, 
+    	dims=("z", "events"))
 
-# Convert resulting numpy arrays to Xarray DataArrays 
-ids_da = xr.DataArray(ids, coords={"z":events_stacked['z'], 'events':np.arange(1,mx+2)}, 
-	dims=("z", "events"))
-ndx_da = xr.DataArray(ndx, coords={"z":events_stacked['z'], 'events':np.arange(1,mx+2)}, 
-	dims=("z", "events"))
-cnt_da = xr.DataArray(dur, coords={"z":events_stacked['z'], 'events':np.arange(1,mx+2)}, 
-	dims=("z", "events"))
+    ids_da.name = "Event_ID"
+    ndx_da.name = "initial_index"
+    cnt_da.name = "duration"
 
-ids_da.name = "Event_ID"
-ndx_da.name = "initial_index"
-cnt_da.name = "duration"
+    logging.info("DataArray are made")
+    ids_da = ids_da.unstack()
+    ndx_da = ndx_da.unstack()
+    cnt_da = cnt_da.unstack()
+    logging.info("Unstacked.")
 
-logging.info("DataArray are made")
-ids_da = ids_da.unstack()
-ndx_da = ndx_da.unstack()
-cnt_da = cnt_da.unstack()
-logging.info("Unstacked.")
+    return xr.merge([ids_da, ndx_da, cnt_da])
+    
 
-print(cnt_da)
+if __name__ == "__main__":
+    #
+    # debug/testing options:
+    #
+    testing = True
+    test_sample_size = 5*366
+    # load event_IDs
+    # observed Tmax
+    # fil = (
+    #     "/project/amp/brianpm/TemperatureExtremes/Derived/CPC_tmax_90pct_event_detection.nc"
+    # )
+    # model TREFMX
+    fil = "/project/amp/brianpm/TemperatureExtremes/Derived/f.e13.FAMIPC5CN.ne30_ne30.beta17.TREFMXAV.90pct_event_detection.nc"
+    ds = xr.open_dataset(fil)
+    logging.info("ds is defined.")
 
-# Save the result in a netCDF file
-if not testing:
-	output = xr.merge([ids_da, ndx_da, cnt_da])
-	output.to_netcdf("/project/amp/brianpm/TemperatureExtremes/Derived/CPC_tmax_90pct_event_attributes.nc", format="NETCDF4")
-logging.info("DONE.")
+    # go do the work
+    ds_out = run(ds)
+    
+    # Save the result in a netCDF file
+    if not testing:
+        output_file = "/project/amp/brianpm/TemperatureExtremes/Derived/f.e13.FAMIPC5CN.ne30_ne30.beta17.TREFMXAV.90pct_event_attributes.nc"
+        utils.save_ds(ds_out, output_file)    
+    logging.info("DONE.")

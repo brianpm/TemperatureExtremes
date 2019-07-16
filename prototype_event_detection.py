@@ -22,19 +22,28 @@ vincrementer = np.vectorize(incrementer)
 
 # the testing data set:
 # "by_coords" for newest version of xarray
-ds = xr.open_mfdataset("/project/amp/jcaron/CPC_Tminmax/tmax.*.nc", combine="by_coords")
+
+# OBSERVED TMAX
+# ds = xr.open_mfdataset("/project/amp/jcaron/CPC_Tminmax/tmax.*.nc", combine="by_coords")
+
+# MODEL TMAX:
+ds = xr.open_dataset("/project/amp/brianpm/TemperatureExtremes/Regridded/f.e13.FAMIPC5CN.ne30_ne30.beta17.t3.cam.h1.TREFMXAV.19650101-20051231.regrid.nc")
 
 # the quantiles:
 ds_q = xr.open_dataset(
-    "/project/amp/brianpm/TemperatureExtremes/Derived/CPC_tmax_dayofyear_quantiles_15daywindow_c20190622.nc"
+    "/project/amp/brianpm/TemperatureExtremes/Derived/f.e13.FAMIPC5CN.ne30_ne30.beta17.TREFMXAV.dayofyear_quantiles_15daywindow_c20190626.nc"
 )
 
-tmax = ds["tmax"]
+ndaysperyear = 365 # Model => 365, Obs => 366
 
-ninety = ds_q["tmax"].sel(quantile=0.9)
+var_name = "TREFMXAV"
+
+tmax = ds[var_name]
+
+ninety = ds_q[var_name].sel(quantile=0.9)
 # make 'dayofyear' be the coordinate variable for ninety
 ninety = ninety.rename({"time": "dayofyear"})
-ninety["dayofyear"] = np.arange(1, 367)
+ninety["dayofyear"] = np.arange(1, ndaysperyear+1)
 
 # now make an array that equals 1 when tmax >= 90p, 0 otherwise
 extreme_mask = np.where(tmax.groupby("time.dayofyear") >= ninety, 1, 0)
@@ -69,7 +78,7 @@ event_id_da.attrs["long_name"] = "Event ID Number based on Tmax > 90th percentil
 
 # option -- should we save this as a dataset:
 save_out = True
-OUTPUT = "/project/amp/brianpm/TemperatureExtremes/Derived/CPC_tmax_90pct_event_detection.nc"
+OUTPUT = "/project/amp/brianpm/TemperatureExtremes/Derived/f.e13.FAMIPC5CN.ne30_ne30.beta17.TREFMXAV.90pct_event_detection.nc"
 if save_out:
     event_id_da.to_netcdf(
         OUTPUT,
