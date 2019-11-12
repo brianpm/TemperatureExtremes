@@ -1,6 +1,7 @@
 import numpy as np
 import xarray as xr
 import logging
+from utils import save_ds
 logging.basicConfig(level=logging.INFO)
 
 
@@ -27,9 +28,10 @@ def theloop(arr):
 
 
 def run(indata):
+    """indata: event detection DataArray or DataSet"""
  
-    if testing:
-    	events = indata["Event_ID"].isel(time=slice(0,test_sample_size))
+    if isinstance(indata, xr.DataArray):
+    	events = indata
     else:
     	events = indata["Event_ID"]
 
@@ -50,6 +52,12 @@ def run(indata):
     ids, ndx, dur = theloop(zint)
     logging.info("Loop done.")
 
+    # use ndx to go back to 'time' and construct array of datetimes
+    dates = np.full(ndx.shape, indata.time[0])
+    for loc in np.arange(ndx.shape[0]):
+        dates[loc, :] = indata.time[ndx[loc, :]]
+    dates[:, 1:] = np.where(ndx[:, 1:] == 0, np.nan, dates[:, 1:]) # in case 0 is actually part of event
+
     # Convert resulting numpy arrays to Xarray DataArrays 
     ids_da = xr.DataArray(ids, coords={"z":events_stacked['z'], 'events':np.arange(1,mx+2)}, 
     	dims=("z", "events"))
@@ -57,18 +65,21 @@ def run(indata):
     	dims=("z", "events"))
     cnt_da = xr.DataArray(dur, coords={"z":events_stacked['z'], 'events':np.arange(1,mx+2)}, 
     	dims=("z", "events"))
-
+    dates_da = xr.DataArray(dates, coords={"z":events_stacked['z'], 'events':np.arange(1,mx+2)},
+        dims=("z", "events"))
     ids_da.name = "Event_ID"
     ndx_da.name = "initial_index"
     cnt_da.name = "duration"
+    dates_da.name = 'initial_date'
 
     logging.info("DataArray are made")
     ids_da = ids_da.unstack()
     ndx_da = ndx_da.unstack()
     cnt_da = cnt_da.unstack()
+    dates_da = dates_da.unstack()
     logging.info("Unstacked.")
 
-    return xr.merge([ids_da, ndx_da, cnt_da])
+    return xr.merge([ids_da, ndx_da, cnt_da, dates_da])
     
 
 if __name__ == "__main__":
@@ -93,5 +104,5 @@ if __name__ == "__main__":
     # Save the result in a netCDF file
     if not testing:
         output_file = "/project/amp/brianpm/TemperatureExtremes/Derived/f.e13.FAMIPC5CN.ne30_ne30.beta17.TREFMXAV.90pct_event_attributes.nc"
-        utils.save_ds(ds_out, output_file)    
+        save_ds(ds_out, output_file)    
     logging.info("DONE.")
