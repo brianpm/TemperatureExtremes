@@ -1,0 +1,12 @@
+input_directory : "/project/amp/jcaron/CPC_Tminmax/"
+input_file_glob : "tmax.*.nc"
+input_var_name  : "tmax"
+
+quantiles_directory : "/project/amp/brianpm/TemperatureExtremes/Derived"
+quantiles_file      : "CPC_tmax_dayofyear_quantiles_15daywindow_c20190622.nc"
+
+event_detection_dir : "/project/amp/brianpm/TemperatureExtremes/Derived"
+event_detection_fil : "CPC_tmax_90pct_event_detection.nc"
+
+event_attribute_dir : "/project/amp/brianpm/TemperatureExtremes/Derived"
+event_attribute_fil : "CPC_tmax_90pct_event_attributes_compressed.nc"
