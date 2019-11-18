@@ -9,9 +9,9 @@ def theloop(arr):
 	"""Generate DataArrays of ID, index, and duration of events.""" 
 	out_event_size = arr.max()            # largest number of events -> defines output array size
 	nz = arr.shape[1]                     # number of spatial points
-	a = np.zeros((nz, out_event_size+1))  # +1 because we didn't include the zeros
-	b = np.zeros((nz, out_event_size+1))
-	c = np.zeros((nz, out_event_size+1))
+	a = np.zeros((nz, out_event_size+1), dtype=int)  # +1 because we didn't include the zeros
+	b = np.zeros((nz, out_event_size+1), dtype=int)
+	c = np.zeros((nz, out_event_size+1), dtype=int)
 	for loc in np.arange(nz):
 		if loc % 1000 == 0:
 			logging.info(f"We are up to location index {loc}")
@@ -35,6 +35,7 @@ def run(indata):
     else:
     	events = indata["Event_ID"]
 
+
     logging.info("events array defined.")
 
     # turn events into time x space by stacking lat & lon:
@@ -51,12 +52,15 @@ def run(indata):
 
     ids, ndx, dur = theloop(zint)
     logging.info("Loop done.")
-
+    logging.info(f"kind of ids: {type(ids)}\n ndx: {type(ndx)}, shape: {ndx.shape}\n dur: {type(dur)}")
+    
     # use ndx to go back to 'time' and construct array of datetimes
-    dates = np.full(ndx.shape, indata.time[0])
+    dates = np.full(ndx.shape, np.datetime64('NaT'), dtype='datetime64[D]')  # fill value should be numpy's "not a time" value. (what if time is in cftime, though?); dtype needs to be set with correct unit (D = days)
     for loc in np.arange(ndx.shape[0]):
-        dates[loc, :] = indata.time[ndx[loc, :]]
-    dates[:, 1:] = np.where(ndx[:, 1:] == 0, np.nan, dates[:, 1:]) # in case 0 is actually part of event
+        last_event = ids[loc, :].max()
+        dates[loc, 0:last_event] = indata.time[ndx[loc, 0:last_event]]  # loc: int; dates: datetime; ndx: int
+    # dates[:, 1:] = np.ma.masked_where(ndx[:, 1:] == 0, dates[:, 1:], copy=False) # mask where eventID == 0
+
 
     # Convert resulting numpy arrays to Xarray DataArrays 
     ids_da = xr.DataArray(ids, coords={"z":events_stacked['z'], 'events':np.arange(1,mx+2)}, 

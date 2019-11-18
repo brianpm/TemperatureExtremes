@@ -31,16 +31,32 @@ def _run_main(inputs):
     x = ds[inputs['input_var_name']]
 
     # 1.
-    quant_ds = Save_Quantile_Dataset._run(ds, x)
-    utils.save_ds(quant_ds, inputs['quantiles_file'])
+    fil1 = Path(inputs['quantiles_directory']) / inputs['quantiles_file']
+    if not fil1.is_file():
+        quant_ds = Save_Quantile_Dataset._run(ds, x)
+        utils.save_ds(quant_ds, fil1)
+        logger.info(f"Finished [1] File saved: {inputs['quantiles_file']}")
+    else:
+        logger.info(f"File Exists: {inputs['quantiles_file']}\n LOAD FILE.")
+        quant_ds = xr.open_dataset(fil1)
+        
 
     # 2.
-    event_ds = prototype_event_detection._run(ds, quant_ds, inputs['input_var_name'])
-    utils.save_ds(event_ds, inputs['event_detection_fil'])
+    fil2 = Path(inputs['event_detection_dir']) / inputs['event_detection_fil']
+    if not fil2.is_file():
+        event_ds = prototype_event_detection._run(ds, quant_ds, inputs['input_var_name'])
+        utils.save_ds(event_ds, fil2)
+        logger.info(f"Finished [2] File saved: {inputs['event_detection_fil']}")
+    else:
+        logger.info("Event detection file found. Loading.")
+        event_ds = xr.open_dataset(fil2)
 
     # 3.
+    fil3 = Path(inputs['event_attribute_dir'])/inputs['event_attribute_fil']
     attributes_ds = event_attributes.run(event_ds)
-    utils.save_ds(attributes_ds, inputs['event_attribute_fil'])
+    utils.save_ds(attributes_ds, fil3)
+    logger.info(f"Finished [3] File saved: {inputs['event_attribute_fil']}")
+
 
 
 

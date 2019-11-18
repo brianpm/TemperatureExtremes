@@ -3,10 +3,10 @@ input_file_glob : "tmin.*.nc"
 input_var_name  : "tmin"
 
 quantiles_directory : "/project/amp/brianpm/TemperatureExtremes/Derived"
-quantiles_file      : "CPC_tmin_dayofyear_quantiles_15daywindow_c20190726.nc"
+quantiles_file      : "CPC_tmin_dayofyear_quantiles_15daywindow_c20191113.nc"
 
 event_detection_dir : "/project/amp/brianpm/TemperatureExtremes/Derived"
-event_detection_fil : "CPC_tmin_90pct_event_detection_c20190726.nc"
+event_detection_fil : "CPC_tmin_90pct_event_detection_c20191113.nc"
 
 event_attribute_dir : "/project/amp/brianpm/TemperatureExtremes/Derived"
-event_attribute_fil : "CPC_tmin_90pct_event_attributes_c20190726.nc"
+event_attribute_fil : "CPC_tmin_90pct_event_attributes_c20191113.nc"

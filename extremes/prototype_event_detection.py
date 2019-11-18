@@ -35,16 +35,19 @@ def _run(ds, ds_q, var_name):
         tmax = ds[var_name]
 
     if isinstance(ds_q, xr.DataArray):
-        ninety = ds_q[var_name].sel(quantile=0.9)
-    else:
         ninety = ds_q.sel(quantile=0.9)
+    else:
+        ninety = ds_q[var_name].sel(quantile=0.9)
 
     # make 'dayofyear' be the coordinate variable for ninety
+    ndaysperyear = len(ds_q['time'])
     ninety = ninety.rename({"time": "dayofyear"})
     ninety["dayofyear"] = np.arange(1, ndaysperyear+1)
+    print(ninety)
 
     # now make an array that equals 1 when tmax >= 90p, 0 otherwise
     extreme_mask = np.where(tmax.groupby("time.dayofyear") >= ninety, 1, 0)
+    print(f"Made the mask. It is shape: {extreme_mask.shape}")
     # get it into form of DataArray with coordinates
     xmask = xr.DataArray(extreme_mask, coords=tmax.coords, dims=tmax.dims)
 
