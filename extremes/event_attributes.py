@@ -59,6 +59,7 @@ def run(indata):
     for loc in np.arange(ndx.shape[0]):
         last_event = ids[loc, :].max()
         dates[loc, 0:last_event] = indata.time[ndx[loc, 0:last_event]]  # loc: int; dates: datetime; ndx: int
+    logging.info("Finished the initial dates reconstruction.")
     # dates[:, 1:] = np.ma.masked_where(ndx[:, 1:] == 0, dates[:, 1:], copy=False) # mask where eventID == 0
 
 
