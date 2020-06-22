@@ -80,8 +80,9 @@ def _run(ds, tmax):
         xr_das[i] = xr.DataArray(doy_quants[i], coords={"quantile":quantile, "lat":lat, "lon":lon}, dims=("quantile", "lat", "lon"))
 
     xr_output = xr.concat(list(xr_das.values()), dim="time")
-    xr_output['time'].values = np.array(doy_list)
-    xr_output['time']['units'] = 'day-of-year'
+    output_time = xr.DataArray(np.array(doy_list), dims=["time"], attrs={"units":"day-of-year"})
+    xr_output['time'] = output_time
+    xr_output.assign_coords({"time":time})
     xr_output.name = tmax.name
     xr_output.attrs['long_name'] = var_long_name
     xr_output.attrs['units'] = var_units
