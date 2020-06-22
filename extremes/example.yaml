@@ -1,0 +1,22 @@
+# The first three lines are the starting point
+# input_directory MUST exist 
+# AND input_file_glob must identify files within input_directory
+# AND that (those) file(s) must contain the variable input_var_name
+input_directory : "/project/amp/brianpm/TemperatureExtremes/Regridded"
+input_file_glob : "f.e13.FAMIPC5CN.ne30_ne30.beta17.t3.cam.h1.TREFMNAV.19650101-20051231.regrid.nc"
+input_var_name  : "TREFMNAV"
+
+# The `input_*` information is used as input to produce
+# files with the quantile information, which will be named using:
+quantiles_directory : "/project/amp/brianpm/TemperatureExtremes/Derived"
+quantiles_file      : "f.e13.FAMIPC5CN.ne30_ne30.beta17.TREFMNAV.dayofyear_quantiles_15daywindow_c20191118.nc"
+
+# The `quantiles_fil` is used as input to produce
+# the event detection file named using:
+event_detection_dir : "/project/amp/brianpm/TemperatureExtremes/Derived"
+event_detection_fil : "f.e13.FAMIPC5CN.ne30_ne30.beta17.TREFMNAV.90pct_event_detection_c20191118.nc"
+
+# The `event_detection_fil` is used as input to produce
+# the event attributes file named using:
+event_attribute_dir : "/project/amp/brianpm/TemperatureExtremes/Derived"
+event_attribute_fil : "f.e13.FAMIPC5CN.ne30_ne30.beta17.TREFMNAV.90pct_event_attributes_c20191118.nc"
