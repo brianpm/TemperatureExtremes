@@ -26,7 +26,7 @@ def get_our_quants(data):
         return np.nanquantile(data, [.01, .05, .1, .25, .5, .75, .9, .95, .99], axis=0, overwrite_input=False, interpolation='linear', keepdims=False)
 
 
-def _run(ds, tmax):
+def _run(ds, tmax, parallel=False):
     #
     # --- no more user input needed after here ---
     # --- REQUIRED: ds, tmax
@@ -62,22 +62,35 @@ def _run(ds, tmax):
     doy_dict = dict()
     doy_quants = dict()
     Ndays = len(doy_list)-1
+
+    use_inds = list()  # keep indices in list for parallelization
     for i, day in enumerate(doy_list):
         logging.info(f"Working on day {i} of {Ndays}")
         use_days = get_window_indices(doy_list, i, 7, 7) # Follows Perkins & Alexander
                                                          # TODO: make window size customizable.
-        use_inds = np.concatenate([np.nonzero(tday == j)[0] for j in use_days])
+        use_inds.append(np.concatenate([np.nonzero(tday == j)[0] for j in use_days]))
         # doy_dict[day] = tmax_np[use_inds, ...]
-        doy_quants[day] = get_our_quants(tmax_np[use_inds, ...])
+        if not parallel:
+            doy_quants[day] = get_our_quants(tmax_np[use_inds[-1], ...])  # taking last indices entry
 
-    logging.info("Completed loop.")
-         
+    logging.info("Completed loop through days of year. Proceed with parallel is {}".format(parallel))
+
+    xr_das = {}  # dictionary to hold quantiles for each day-of-year
+    if parallel:
+        with mp.Pool(8) as p:
+            result = p.map(get_our_quants, (tmax_np[d, ...] for d in use_inds))
+            doy_quants = zip(day_list, result)
+        for dq in doy_quants:
+            # different from non-parallel case b/c doy_quants is an iterator
+            xr_das[dq[0]] = xr.DataArray(dq[1], coords={"quantile":quantile, "lat":lat, "lon":lon}, dims=("quantile", "lat", "lon"))
+    else:
+        # CONVERSION TO XARRAY AND EXPORT TO netCDF
+        for i in doy_quants:
+            xr_das[i] = xr.DataArray(doy_quants[i], coords={"quantile":quantile, "lat":lat, "lon":lon}, dims=("quantile", "lat", "lon"))
+
+    logging.info("Day of year quantiles stored in dictionary, proceed to file writing.")         
     # doy_quants = {i: get_our_quants(doy_dict[i]) for i in doy_dict} # MEMORY ERROR (even with a lot of memory)
 
-    # CONVERSION TO XARRAY AND EXPORT TO netCDF
-    xr_das = {}
-    for i in doy_quants:
-        xr_das[i] = xr.DataArray(doy_quants[i], coords={"quantile":quantile, "lat":lat, "lon":lon}, dims=("quantile", "lat", "lon"))
 
     xr_output = xr.concat(list(xr_das.values()), dim="time")
     output_time = xr.DataArray(np.array(doy_list), dims=["time"], attrs={"units":"day-of-year"})
@@ -94,7 +107,7 @@ if __name__ == "__main__":
 
     # # Calculate and save the quantiles from large data
     # 
-    # (1979--2018 daily values on a 0.5° grid).
+    # (1979--2018 daily values on a 0.5ï¿½ grid).
     # To increase the sample size for each calendar day, we apply a window centered on the day and extending 7 days before and after. 
     # 
     # Efficiency is a problem in this script.
