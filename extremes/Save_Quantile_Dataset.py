@@ -5,6 +5,13 @@ from datetime import date
 import multiprocessing as mp
 import logging
 from utils import save_ds
+try:
+    from tqdm import tqdm
+except ImportError:
+    import getpass
+    print(f"{getpass.getuser()}, you were supposed to install tqdm!")
+    def tqdm(*args):
+        return args[0]
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
@@ -78,8 +85,9 @@ def _run(ds, tmax, parallel=False):
     xr_das = {}  # dictionary to hold quantiles for each day-of-year
     if parallel:
         with mp.Pool(8) as p:
-            result = p.map(get_our_quants, (tmax_np[d, ...] for d in use_inds))
-            doy_quants = zip(day_list, result)
+            ziter = (tmax_np[d, ...] for d in use_inds)
+            result = list(tqdm(p.imap(get_our_quants, ziter), total=len(use_inds)))
+            doy_quants = zip(doy_list, result)
         for dq in doy_quants:
             # different from non-parallel case b/c doy_quants is an iterator
             xr_das[dq[0]] = xr.DataArray(dq[1], coords={"quantile":quantile, "lat":lat, "lon":lon}, dims=("quantile", "lat", "lon"))

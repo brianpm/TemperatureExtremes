@@ -33,7 +33,11 @@ def _run_main(inputs):
     # 1.
     fil1 = Path(inputs['quantiles_directory']) / inputs['quantiles_file']
     if not fil1.is_file():
-        quant_ds = Save_Quantile_Dataset._run(ds, x)
+        if 'quantiles_parallel' in inputs:
+            qp = inputs['quantiles_parallel']
+        else:
+            qp = False
+        quant_ds = Save_Quantile_Dataset._run(ds, x, parallel=qp)
         utils.save_ds(quant_ds, fil1)
         logger.info(f"Finished [1] File saved: {inputs['quantiles_file']}")
     else:
