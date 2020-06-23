@@ -81,8 +81,8 @@ def _run(ds, tmax):
 
     xr_output = xr.concat(list(xr_das.values()), dim="time")
     output_time = xr.DataArray(np.array(doy_list), dims=["time"], attrs={"units":"day-of-year"})
-    xr_output['time'] = output_time
-    xr_output.assign_coords({"time":time})
+    # xr_output['time'] = output_time
+    xr_output.assign_coords({"time":output_time})
     xr_output.name = tmax.name
     xr_output.attrs['long_name'] = var_long_name
     xr_output.attrs['units'] = var_units
