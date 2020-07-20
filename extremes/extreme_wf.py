@@ -35,9 +35,13 @@ def _run_main(inputs):
     if not fil1.is_file():
         if 'quantiles_parallel' in inputs:
             qp = inputs['quantiles_parallel']
+            if 'quantiles_ncpu' in inputs:
+                ncpu = inputs['quantiles_ncpu']
+            else:
+                ncpu = None  # let it default
         else:
             qp = False
-        quant_ds = Save_Quantile_Dataset._run(ds, x, parallel=qp)
+        quant_ds = Save_Quantile_Dataset._run(ds, x, parallel=qp, ncpu=ncpu)
         utils.save_ds(quant_ds, fil1)
         logger.info(f"Finished [1] File saved: {inputs['quantiles_file']}")
     else:

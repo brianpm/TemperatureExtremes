@@ -33,7 +33,7 @@ def get_our_quants(data):
         return np.nanquantile(data, [.01, .05, .1, .25, .5, .75, .9, .95, .99], axis=0, overwrite_input=False, interpolation='linear', keepdims=False)
 
 
-def _run(ds, tmax, parallel=False):
+def _run(ds, tmax, parallel=False, ncpu=None):
     #
     # --- no more user input needed after here ---
     # --- REQUIRED: ds, tmax
@@ -84,7 +84,11 @@ def _run(ds, tmax, parallel=False):
 
     xr_das = {}  # dictionary to hold quantiles for each day-of-year
     if parallel:
-        with mp.Pool(8) as p:
+        if ncpu is None:
+            ncpu = mp.cpu_count()
+            if ncpu > 8:
+                ncpu /= 2  # don't take more than half of larger machines
+        with mp.Pool(ncpu) as p:
             ziter = (tmax_np[d, ...] for d in use_inds)
             result = list(tqdm(p.imap(get_our_quants, ziter), total=len(use_inds)))
             doy_quants = zip(doy_list, result)

@@ -11,8 +11,9 @@ input_var_name  : "TREFMNAV"
 quantiles_directory : "/project/amp/brianpm/TemperatureExtremes/Derived"
 quantiles_file      : "f.e13.FAMIPC5CN.ne30_ne30.beta17.TREFMNAV.dayofyear_quantiles_15daywindow_c20191118.nc"
 
-# Optional: use parallelized version of quantiles calculation
+# Optional: use parallelized version of quantiles calculation, optionally specify number of CPUs to use.
 quantiles_parallel  : False
+quantiles_ncpu : 8
 
 # The `quantiles_fil` is used as input to produce
 # the event detection file named using:
