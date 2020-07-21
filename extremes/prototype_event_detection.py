@@ -1,7 +1,17 @@
+import logging
 import xarray as xr
 import numpy as np
-from utils import save_ds
+try:
+    from tqdm import tqdm
+except ImportError:
+    import getpass
+    print(f"{getpass.getuser()}, you were supposed to install tqdm!")
+    def tqdm(*args):
+        return args[0]
 
+from utils import save_ds
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 def incrementer(current_value, previous_value, last_id):
 
@@ -30,9 +40,9 @@ def _run(ds, ds_q, var_name):
 
     # ds could be a DataArray:
     if isinstance(ds, xr.DataArray):
-        tmax = ds
+        tmax = ds.astype('float32')
     else:
-        tmax = ds[var_name]
+        tmax = ds[var_name].astype('float32')  # reduce to float32 to allow large arrays
 
     if isinstance(ds_q, xr.DataArray):
         ninety = ds_q.sel(quantile=0.9)
@@ -43,24 +53,24 @@ def _run(ds, ds_q, var_name):
     ndaysperyear = len(ds_q['time'])
     ninety = ninety.rename({"time": "dayofyear"})
     ninety["dayofyear"] = np.arange(1, ndaysperyear+1)
-    print(ninety)
+    logging.info(f"Made array ninety, {ninety.shape}")
 
     # now make an array that equals 1 when tmax >= 90p, 0 otherwise
-    extreme_mask = np.where(tmax.groupby("time.dayofyear") >= ninety, 1, 0)
-    print(f"Made the mask. It is shape: {extreme_mask.shape}")
+    extreme_mask = np.where(tmax.groupby("time.dayofyear") >= ninety, np.int8(1), np.int8(0))
+    logging.info(f"Made the mask. It is shape: {extreme_mask.shape} It is type: {extreme_mask.dtype}")
     # get it into form of DataArray with coordinates
     xmask = xr.DataArray(extreme_mask, coords=tmax.coords, dims=tmax.dims)
-
+    logging.info(f"xmask created, has dtype {xmask.dtype} and shape {xmask.shape}")
     # make an array that is shape lat x lon, filled with zeros
     # this will hold the current number of events at each location
     xshape = tmax.shape # assume it is time, lat, lon
     assert(len(xshape) == 3)
     nlat = xshape[1]
     nlon = xshape[2]
-    xcount = np.zeros((nlat, nlon))
+    xcount = np.zeros((nlat, nlon), dtype=np.uint32)
 
     # initialize a new array:
-    event_id = np.zeros(xshape)
+    event_id = np.zeros(xshape, dtype=np.uint32)
     event_id[0, ...] = extreme_mask[0, ...]
 
     # go through the all the times in the data:
@@ -69,7 +79,7 @@ def _run(ds, ds_q, var_name):
     # This will be at each grid point:
     # ---> so each point should have its own event sequence that is independent from other locations
     # This loop will be slow; there might be ways to improve it, but we can suffer the wait for now.
-    for t in np.arange(1, len(tmax["time"])):
+    for t in tqdm(np.arange(1, len(tmax["time"])), desc="Time Loop"):
         event_id[t, ...] = vincrementer(xmask[t, ...], xmask[t - 1, ...], xcount)
         # increment xcount:
         # rule: if the current event_id is larger than the last time, it means we started a new event,

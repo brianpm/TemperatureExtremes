@@ -84,10 +84,15 @@ def _run(ds, tmax, parallel=False, ncpu=None):
 
     xr_das = {}  # dictionary to hold quantiles for each day-of-year
     if parallel:
+        max_cpu = mp.cpu_count()
         if ncpu is None:
-            ncpu = mp.cpu_count()
+            ncpu = max_cpu
             if ncpu > 8:
                 ncpu /= 2  # don't take more than half of larger machines
+        if ncpu > max_cpu:
+            logging.info(f"Requested {ncpu} but only {max_cpu} available, changing.")
+            ncpu = max_cpu
+        logging.info(f"You should know that you are requesting {ncpu} CPUS (type of ncpu is {type(ncpu)}")
         with mp.Pool(ncpu) as p:
             ziter = (tmax_np[d, ...] for d in use_inds)
             result = list(tqdm(p.imap(get_our_quants, ziter), total=len(use_inds)))

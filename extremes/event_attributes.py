@@ -1,6 +1,14 @@
 import numpy as np
 import xarray as xr
 import logging
+try:
+    from tqdm import tqdm
+except ImportError:
+    import getpass
+    print(f"{getpass.getuser()}, you were supposed to install tqdm!")
+    def tqdm(*args):
+        return args[0]
+
 from utils import save_ds
 logging.basicConfig(level=logging.INFO)
 
@@ -12,9 +20,9 @@ def theloop(arr):
 	a = np.zeros((nz, out_event_size+1), dtype=int)  # +1 because we didn't include the zeros
 	b = np.zeros((nz, out_event_size+1), dtype=int)
 	c = np.zeros((nz, out_event_size+1), dtype=int)
-	for loc in np.arange(nz):
-		if loc % 1000 == 0:
-			logging.info(f"We are up to location index {loc}")
+	for loc in tqdm(np.arange(nz), desc="Attribute Loop"):
+		# if loc % 1000 == 0:
+			# logging.info(f"We are up to location index {loc}")
 		loc_ids, init_ndx, duration = np.unique(
 	    	arr[:,loc], return_index=True, return_counts=True)
 		n_loc = len(loc_ids)
@@ -56,7 +64,7 @@ def run(indata):
     
     # use ndx to go back to 'time' and construct array of datetimes
     dates = np.full(ndx.shape, np.datetime64('NaT'), dtype='datetime64[D]')  # fill value should be numpy's "not a time" value. (what if time is in cftime, though?); dtype needs to be set with correct unit (D = days)
-    for loc in np.arange(ndx.shape[0]):
+    for loc in tqdm(np.arange(ndx.shape[0]), desc="Dates Loop"):
         last_event = ids[loc, :].max()
         dates[loc, 0:last_event] = indata.time[ndx[loc, 0:last_event]]  # loc: int; dates: datetime; ndx: int
     logging.info("Finished the initial dates reconstruction.")
